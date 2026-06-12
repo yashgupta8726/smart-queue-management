@@ -1,108 +1,85 @@
 import { useState } from "react";
-import {
-signInWithEmailAndPassword
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase/firebase";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
-import {
-auth
-} from "../firebase/firebase";
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-import {
-useNavigate
-} from "react-router-dom";
+  const navigate = useNavigate();
 
-function Login(){
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-const[email,setEmail]=
-useState("");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success("Welcome Admin 🚀");
+      navigate("/admin");
+    } catch (err) {
+      toast.error("Wrong Email or Password");
+    }
+  };
 
-const[password,
-setPassword]=
-useState("");
+  const glass =
+    "bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl";
 
-const navigate=
-useNavigate();
+  const input =
+    "w-full p-3 rounded-xl bg-black/40 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400";
 
-const handleLogin=
-async(e)=>{
+  const btn =
+    "w-full p-3 rounded-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 hover:scale-105 transition active:scale-95";
 
-e.preventDefault();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black text-white p-4">
 
-try{
+      <div className={`${glass} w-full max-w-md p-8`}>
 
-await signInWithEmailAndPassword(
-auth,
-email,
-password
-);
+        {/* HEADER */}
+        <div className="text-center">
+          <h1 className="text-3xl font-extrabold">
+            ⚡ Smart Queue System
+          </h1>
+          <p className="text-gray-400 mt-2">
+            Admin Login Panel
+          </p>
+        </div>
 
-navigate("/admin");
+        {/* FORM */}
+        <form onSubmit={handleLogin} className="mt-6 space-y-4">
 
-}
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={input}
+          />
 
-catch{
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={input}
+          />
 
-alert(
-"Wrong Email or Password"
-);
+          <button type="submit" className={btn}>
+            Login 🚀
+          </button>
 
-}
+        </form>
 
-};
+        {/* FOOTER */}
+        <p className="text-xs text-gray-500 text-center mt-6">
+          Secure Firebase Authentication Enabled
+        </p>
 
-return(
+      </div>
 
-<div className="p-10">
-
-<h1 className="text-3xl">
-
-Admin Login
-
-</h1>
-
-<form
-onSubmit={handleLogin}
-className="flex flex-col gap-5 mt-5"
->
-
-<input
-type="email"
-placeholder="Email"
-
-onChange={
-(e)=>
-setEmail(
-e.target.value
-)
-}
-
-/>
-
-<input
-type="password"
-placeholder="Password"
-
-onChange={
-(e)=>
-setPassword(
-e.target.value
-)
-}
-
-/>
-
-<button>
-
-Login
-
-</button>
-
-</form>
-
-</div>
-
-);
-
+    </div>
+  );
 }
 
 export default Login;
