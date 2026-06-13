@@ -3,19 +3,30 @@ import { getOrders } from "../services/orderService";
 
 function Track() {
   const [orders, setOrders] = useState([]);
-  const prevRef = useRef({}); // ✅ FIX: stable previous state
+  const prevRef = useRef({});
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
-  /* 🔊 SPEECH FUNCTION */
+  /* 🔊 SPEAK FUNCTION (SAFE) */
   const speak = (text) => {
+    if (!voiceEnabled) return;
+
     if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
 
-      window.speechSynthesis.cancel(); // ✅ prevent overlapping voices
       window.speechSynthesis.speak(utterance);
     }
+  };
+
+  /* 🔥 ENABLE VOICE ON USER CLICK */
+  const enableVoice = () => {
+    setVoiceEnabled(true);
+    speechSynthesis.resume();
+    speak("Voice enabled");
   };
 
   useEffect(() => {
@@ -28,15 +39,11 @@ function Track() {
         const oldStatus = prev[order.id];
         const newStatus = order.status;
 
-        // 🔥 only speak when status changes
         if (oldStatus && oldStatus !== newStatus) {
-          speak(
-            `Token number ${order.token} is ${newStatus}`
-          );
+          speak(`Token number ${order.token} is ${newStatus}`);
         }
       });
 
-      // ✅ update ref (NO re-render issue)
       const map = {};
       data.forEach((o) => {
         map[o.id] = o.status;
@@ -63,12 +70,23 @@ function Track() {
 
       {/* HEADER */}
       <div className={`${glass} p-6 text-center`}>
+
         <h1 className="text-3xl md:text-4xl font-extrabold">
           📺 Live Queue Display
         </h1>
+
         <p className="text-gray-400 mt-1">
           Smart Order Tracking System
         </p>
+
+        {/* 🔊 ONLY ADDITION (NO UI CHANGE IMPACT) */}
+        <button
+          onClick={enableVoice}
+          className="mt-3 px-4 py-2 bg-green-500 text-black rounded-lg font-bold"
+        >
+          🔊 Enable Voice
+        </button>
+
       </div>
 
       {/* CURRENT + NEXT */}
