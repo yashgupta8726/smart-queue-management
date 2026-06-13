@@ -1,11 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getOrders } from "../services/orderService";
 
 function Track() {
   const [orders, setOrders] = useState([]);
+  const prevRef = useRef({}); // ✅ FIX: stable previous state
+
+  /* 🔊 SPEECH FUNCTION */
+  const speak = (text) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      window.speechSynthesis.cancel(); // ✅ prevent overlapping voices
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   useEffect(() => {
-    const unsubscribe = getOrders((data) => setOrders(data));
+    const unsubscribe = getOrders((data) => {
+      setOrders(data);
+
+      const prev = prevRef.current;
+
+      data.forEach((order) => {
+        const oldStatus = prev[order.id];
+        const newStatus = order.status;
+
+        // 🔥 only speak when status changes
+        if (oldStatus && oldStatus !== newStatus) {
+          speak(
+            `Token number ${order.token} is ${newStatus}`
+          );
+        }
+      });
+
+      // ✅ update ref (NO re-render issue)
+      const map = {};
+      data.forEach((o) => {
+        map[o.id] = o.status;
+      });
+
+      prevRef.current = map;
+    });
+
     return () => unsubscribe();
   }, []);
 
