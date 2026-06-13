@@ -7,37 +7,62 @@ function Track() {
 
   const prevRef = useRef({});
 
-  /* 🔊 SPEAK FUNCTION */
+  const TIME_PER_KG = 5; // 🍯 1kg = 5 min
+
+  /* 🧠 EXTRACT KG FROM STRING */
+  const getKg = (jalebi) => {
+    if (!jalebi) return 0;
+
+    let kg = 0;
+
+    const kgMatch = jalebi.match(/(\d+)\s*Kg/i);
+    const gMatch = jalebi.match(/(\d+)\s*g/i);
+
+    if (kgMatch) kg += Number(kgMatch[1]);
+    if (gMatch) kg += Number(gMatch[1]) / 1000;
+
+    return kg;
+  };
+
+  /* ⏱ CORE QUEUE WAITING TIME */
+  const getWaitingTime = (index) => {
+    let totalMinutes = 0;
+
+    for (let i = 0; i < index; i++) {
+      const order = queue[i];
+      const kg = getKg(order?.jalebi);
+      totalMinutes += kg * TIME_PER_KG;
+    }
+
+    if (totalMinutes < 60) return `${totalMinutes} min`;
+
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+
+    return `${h}h ${m}m`;
+  };
+
+  /* 🔊 SPEAK */
   const speak = (text) => {
     if (!voiceEnabled) return;
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  /* 🔥 TOGGLE VOICE */
+  /* 🔘 VOICE TOGGLE */
   const toggleVoice = () => {
     const newState = !voiceEnabled;
     setVoiceEnabled(newState);
 
-    if (newState) {
-      speechSynthesis.resume();
-      speak("Voice enabled");
-    } else {
-      speechSynthesis.cancel();
-      speak("Voice disabled");
-    }
+    if (newState) speak("Voice enabled");
+    else window.speechSynthesis.cancel();
   };
 
-  /* 📡 REALTIME ORDER LISTENER */
+  /* 📡 LIVE DATA */
   useEffect(() => {
     const unsubscribe = getOrders((data) => {
       setOrders(data);
@@ -45,33 +70,25 @@ function Track() {
       const prev = prevRef.current;
 
       data.forEach((order) => {
-        const oldStatus = prev[order.id];
-        const newStatus = order.status;
-
-        if (oldStatus && oldStatus !== newStatus) {
-          setTimeout(() => {
-            speak(`Token number ${order.token} is ${newStatus}`);
-          }, 200);
+        if (prev[order.id] && prev[order.id] !== order.status) {
+          speak(`Token ${order.token} is ${order.status}`);
         }
       });
 
       const map = {};
-      data.forEach((o) => {
-        map[o.id] = o.status;
-      });
-
+      data.forEach((o) => (map[o.id] = o.status));
       prevRef.current = map;
     });
 
     return () => unsubscribe();
   }, [voiceEnabled]);
 
+  /* 📊 QUEUE */
   const queue = orders
-    .filter((order) => order.status !== "Completed")
+    .filter((o) => o.status !== "Completed")
     .sort((a, b) => a.token - b.token);
 
   const current = queue[0];
-  const next = queue[1];
 
   const glass =
     "bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl";
@@ -81,127 +98,62 @@ function Track() {
 
       {/* HEADER */}
       <div className={`${glass} p-6 text-center`}>
-        <h1 className="text-3xl md:text-4xl font-extrabold">
-          📺 Live Queue Display
-        </h1>
+        <h1 className="text-3xl font-extrabold">📺 Live Queue System</h1>
 
-        <p className="text-gray-400 mt-1">
-          Smart Order Tracking System
-        </p>
-
-        {/* 🔊 VOICE BUTTON */}
         <button
           onClick={toggleVoice}
-          className={`mt-3 px-4 py-2 rounded-lg font-bold transition ${
-            voiceEnabled
-              ? "bg-red-500 text-white"
-              : "bg-green-500 text-black"
+          className={`mt-3 px-4 py-2 rounded-lg font-bold ${
+            voiceEnabled ? "bg-red-500" : "bg-green-500 text-black"
           }`}
         >
           🔊 {voiceEnabled ? "Disable Voice" : "Enable Voice"}
         </button>
       </div>
 
-      {/* CURRENT + NEXT */}
-      <div className="grid md:grid-cols-2 gap-4 mt-6">
+      {/* CURRENT */}
+      <div className={`${glass} p-6 mt-6 text-center`}>
+        <h2 className="text-xl font-bold">🔴 Now Serving</h2>
 
-        {/* CURRENT */}
-        <div className={`${glass} p-6 text-center`}>
-          <h2 className="text-xl font-bold text-gray-300">
-            🔴 Now Preparing
-          </h2>
-
-          {current ? (
-            <>
-              <div className="text-6xl md:text-7xl font-extrabold text-orange-400 mt-4">
-                #{current.token}
-              </div>
-
-              <p className="mt-3 text-gray-300">
-                👤 {current.customer}
-              </p>
-
-              <p className="text-sm text-gray-400 mt-1">
-                Status: {current.status}
-              </p>
-            </>
-          ) : (
-            <p className="mt-4 text-gray-400">No Active Orders</p>
-          )}
-        </div>
-
-        {/* NEXT */}
-        <div className={`${glass} p-6 text-center`}>
-          <h2 className="text-xl font-bold text-gray-300">
-            🟡 Be Ready
-          </h2>
-
-          {next ? (
-            <>
-              <div className="text-5xl md:text-6xl font-extrabold text-yellow-400 mt-4">
-                #{next.token}
-              </div>
-
-              <p className="mt-3 text-gray-300">
-                👤 {next.customer}
-              </p>
-            </>
-          ) : (
-            <p className="mt-4 text-gray-400">No Next Order</p>
-          )}
-        </div>
-
-      </div>
-
-      {/* QUEUE LIST */}
-      <div className={`${glass} mt-6 p-4 md:p-6`}>
-        <h2 className="text-2xl font-bold mb-4">
-          📋 Live Queue
-        </h2>
-
-        {queue.length === 0 ? (
-          <p className="text-gray-400">No Orders</p>
+        {current ? (
+          <>
+            <h1 className="text-5xl text-orange-400 font-bold">
+              #{current.token}
+            </h1>
+            <p>👤 {current.customer}</p>
+          </>
         ) : (
-          <div className="space-y-3">
-            {queue.map((order) => (
-              <div
-                key={order.id}
-                className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col md:flex-row md:justify-between md:items-center hover:bg-white/10 transition"
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-orange-300">
-                    Token #{order.token}
-                  </h3>
-
-                  <p className="text-gray-300">
-                    👤 {order.customer}
-                  </p>
-
-                  <p className="text-sm text-gray-400">
-                    💳 {order.payment}
-                  </p>
-                </div>
-
-                <div className="text-sm mt-2 md:mt-0 text-gray-300">
-                  {order.jalebi && <p>🍯 {order.jalebi}</p>}
-                  {order.dahi && <p>🥛 {order.dahi}</p>}
-                </div>
-
-                <div className="mt-2 md:mt-0">
-                  <span className="px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-400">
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p>No Orders</p>
         )}
       </div>
 
-      {/* FOOTER */}
-      <p className="text-center mt-6 text-gray-500 text-sm">
-        Please wait for your token number 🙏
-      </p>
+      {/* QUEUE LIST */}
+      <div className={`${glass} mt-6 p-5`}>
+        <h2 className="text-xl font-bold mb-4">
+          📋 Queue (Smart Waiting Time)
+        </h2>
+
+        {queue.map((order, index) => (
+          <div
+            key={order.id}
+            className="flex justify-between p-4 border-b border-white/10"
+          >
+            <div>
+              <p className="text-orange-300 font-bold">
+                Token #{order.token}
+              </p>
+              <p className="text-gray-300">👤 {order.customer}</p>
+              <p className="text-sm text-gray-400">
+                🍯 {order.jalebi || "0"}
+              </p>
+            </div>
+
+            {/* ⏱ FINAL WAITING TIME */}
+            <div className="text-green-400 font-bold">
+              ⏱ {index === 0 ? "In Progress" : getWaitingTime(index)}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
