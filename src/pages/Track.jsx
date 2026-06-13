@@ -3,10 +3,11 @@ import { getOrders } from "../services/orderService";
 
 function Track() {
   const [orders, setOrders] = useState([]);
-  const prevRef = useRef({});
   const [voiceEnabled, setVoiceEnabled] = useState(false);
 
-  /* 🔊 SPEAK FUNCTION (SAFE) */
+  const prevRef = useRef({});
+
+  /* 🔊 SPEAK FUNCTION */
   const speak = (text) => {
     if (!voiceEnabled) return;
 
@@ -22,13 +23,21 @@ function Track() {
     }
   };
 
-  /* 🔥 ENABLE VOICE ON USER CLICK */
-  const enableVoice = () => {
-    setVoiceEnabled(true);
-    speechSynthesis.resume();
-    speak("Voice enabled");
+  /* 🔥 TOGGLE VOICE */
+  const toggleVoice = () => {
+    const newState = !voiceEnabled;
+    setVoiceEnabled(newState);
+
+    if (newState) {
+      speechSynthesis.resume();
+      speak("Voice enabled");
+    } else {
+      speechSynthesis.cancel();
+      speak("Voice disabled");
+    }
   };
 
+  /* 📡 REALTIME ORDER LISTENER */
   useEffect(() => {
     const unsubscribe = getOrders((data) => {
       setOrders(data);
@@ -40,7 +49,9 @@ function Track() {
         const newStatus = order.status;
 
         if (oldStatus && oldStatus !== newStatus) {
-          speak(`Token number ${order.token} is ${newStatus}`);
+          setTimeout(() => {
+            speak(`Token number ${order.token} is ${newStatus}`);
+          }, 200);
         }
       });
 
@@ -53,7 +64,7 @@ function Track() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [voiceEnabled]);
 
   const queue = orders
     .filter((order) => order.status !== "Completed")
@@ -70,7 +81,6 @@ function Track() {
 
       {/* HEADER */}
       <div className={`${glass} p-6 text-center`}>
-
         <h1 className="text-3xl md:text-4xl font-extrabold">
           📺 Live Queue Display
         </h1>
@@ -79,14 +89,17 @@ function Track() {
           Smart Order Tracking System
         </p>
 
-        {/* 🔊 ONLY ADDITION (NO UI CHANGE IMPACT) */}
+        {/* 🔊 VOICE BUTTON */}
         <button
-          onClick={enableVoice}
-          className="mt-3 px-4 py-2 bg-green-500 text-black rounded-lg font-bold"
+          onClick={toggleVoice}
+          className={`mt-3 px-4 py-2 rounded-lg font-bold transition ${
+            voiceEnabled
+              ? "bg-red-500 text-white"
+              : "bg-green-500 text-black"
+          }`}
         >
-          🔊 Enable Voice
+          🔊 {voiceEnabled ? "Disable Voice" : "Enable Voice"}
         </button>
-
       </div>
 
       {/* CURRENT + NEXT */}
@@ -94,7 +107,6 @@ function Track() {
 
         {/* CURRENT */}
         <div className={`${glass} p-6 text-center`}>
-
           <h2 className="text-xl font-bold text-gray-300">
             🔴 Now Preparing
           </h2>
@@ -116,12 +128,10 @@ function Track() {
           ) : (
             <p className="mt-4 text-gray-400">No Active Orders</p>
           )}
-
         </div>
 
         {/* NEXT */}
         <div className={`${glass} p-6 text-center`}>
-
           <h2 className="text-xl font-bold text-gray-300">
             🟡 Be Ready
           </h2>
@@ -139,14 +149,12 @@ function Track() {
           ) : (
             <p className="mt-4 text-gray-400">No Next Order</p>
           )}
-
         </div>
 
       </div>
 
       {/* QUEUE LIST */}
       <div className={`${glass} mt-6 p-4 md:p-6`}>
-
         <h2 className="text-2xl font-bold mb-4">
           📋 Live Queue
         </h2>
@@ -155,13 +163,11 @@ function Track() {
           <p className="text-gray-400">No Orders</p>
         ) : (
           <div className="space-y-3">
-
             {queue.map((order) => (
               <div
                 key={order.id}
                 className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col md:flex-row md:justify-between md:items-center hover:bg-white/10 transition"
               >
-
                 <div>
                   <h3 className="font-bold text-lg text-orange-300">
                     Token #{order.token}
@@ -186,20 +192,16 @@ function Track() {
                     {order.status}
                   </span>
                 </div>
-
               </div>
             ))}
-
           </div>
         )}
-
       </div>
 
       {/* FOOTER */}
       <p className="text-center mt-6 text-gray-500 text-sm">
         Please wait for your token number 🙏
       </p>
-
     </div>
   );
 }
