@@ -7,42 +7,9 @@ function Track() {
 
   const prevRef = useRef({});
 
-  const TIME_PER_KG = 5; // 🍯 1kg = 5 min
+  const JALEBI_TIME_PER_KG = 5;
+  const DAHI_TIME = 0;
 
-  /* 🧠 EXTRACT KG FROM STRING */
-  const getKg = (jalebi) => {
-    if (!jalebi) return 0;
-
-    let kg = 0;
-
-    const kgMatch = jalebi.match(/(\d+)\s*Kg/i);
-    const gMatch = jalebi.match(/(\d+)\s*g/i);
-
-    if (kgMatch) kg += Number(kgMatch[1]);
-    if (gMatch) kg += Number(gMatch[1]) / 1000;
-
-    return kg;
-  };
-
-  /* ⏱ CORE QUEUE WAITING TIME */
-  const getWaitingTime = (index) => {
-    let totalMinutes = 0;
-
-    for (let i = 0; i < index; i++) {
-      const order = queue[i];
-      const kg = getKg(order?.jalebi);
-      totalMinutes += kg * TIME_PER_KG;
-    }
-
-    if (totalMinutes < 60) return `${totalMinutes} min`;
-
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-
-    return `${h}h ${m}m`;
-  };
-
-  /* 🔊 SPEAK */
   const speak = (text) => {
     if (!voiceEnabled) return;
 
@@ -53,7 +20,6 @@ function Track() {
     }
   };
 
-  /* 🔘 VOICE TOGGLE */
   const toggleVoice = () => {
     const newState = !voiceEnabled;
     setVoiceEnabled(newState);
@@ -62,7 +28,6 @@ function Track() {
     else window.speechSynthesis.cancel();
   };
 
-  /* 📡 LIVE DATA */
   useEffect(() => {
     const unsubscribe = getOrders((data) => {
       setOrders(data);
@@ -83,12 +48,25 @@ function Track() {
     return () => unsubscribe();
   }, [voiceEnabled]);
 
-  /* 📊 QUEUE */
   const queue = orders
     .filter((o) => o.status !== "Completed")
     .sort((a, b) => a.token - b.token);
 
   const current = queue[0];
+  const next = queue[1];
+
+  const getOrderTime = (order) => {
+    const jalebiKg = parseInt(order.jalebi?.match(/\d+/)?.[0] || 0);
+    return jalebiKg * JALEBI_TIME_PER_KG + DAHI_TIME;
+  };
+
+  const getWaitingTime = (index) => {
+    let total = 0;
+    for (let i = 0; i < index; i++) {
+      total += getOrderTime(queue[i]);
+    }
+    return total;
+  };
 
   const glass =
     "bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl";
@@ -98,7 +76,11 @@ function Track() {
 
       {/* HEADER */}
       <div className={`${glass} p-6 text-center`}>
-        <h1 className="text-3xl font-extrabold">📺 Live Queue System</h1>
+        <h1 className="text-3xl font-bold">📺 Live Queue Display</h1>
+
+        <p className="text-gray-400 mt-1">
+          Smart Order Tracking System
+        </p>
 
         <button
           onClick={toggleVoice}
@@ -110,50 +92,99 @@ function Track() {
         </button>
       </div>
 
-      {/* CURRENT */}
-      <div className={`${glass} p-6 mt-6 text-center`}>
-        <h2 className="text-xl font-bold">🔴 Now Serving</h2>
+      {/* CURRENT + NEXT */}
+      <div className="grid md:grid-cols-2 gap-4 mt-6">
 
-        {current ? (
-          <>
-            <h1 className="text-5xl text-orange-400 font-bold">
-              #{current.token}
-            </h1>
-            <p>👤 {current.customer}</p>
-          </>
-        ) : (
-          <p>No Orders</p>
-        )}
+        {/* CURRENT */}
+        <div className={`${glass} p-6 text-center`}>
+          <h2 className="text-xl font-bold">🔴 Now Preparing</h2>
+
+          {current ? (
+            <>
+              <div className="text-6xl font-bold text-orange-400 mt-3">
+                #{current.token}
+              </div>
+
+              <p className="mt-2">👤 {current.customer}</p>
+
+              <p className="text-green-400 mt-2 font-bold">
+                ⏱ In Progress
+              </p>
+            </>
+          ) : (
+            <p className="text-gray-400 mt-4">No Active Orders</p>
+          )}
+        </div>
+
+        {/* NEXT */}
+        <div className={`${glass} p-6 text-center`}>
+          <h2 className="text-xl font-bold">🟡 Be Ready</h2>
+
+          {next ? (
+            <>
+              <div className="text-5xl font-bold text-yellow-400 mt-3">
+                #{next.token}
+              </div>
+
+              <p className="mt-2">👤 {next.customer}</p>
+
+              <p className="text-green-400 mt-2 font-bold">
+                ⏱ Waiting: {getWaitingTime(1)} min
+              </p>
+            </>
+          ) : (
+            <p className="text-gray-400 mt-4">No Next Order</p>
+          )}
+        </div>
       </div>
 
       {/* QUEUE LIST */}
-      <div className={`${glass} mt-6 p-5`}>
-        <h2 className="text-xl font-bold mb-4">
-          📋 Queue (Smart Waiting Time)
-        </h2>
+      <div className={`${glass} mt-6 p-4 md:p-6`}>
+        <h2 className="text-2xl font-bold mb-4">📋 Live Queue</h2>
 
-        {queue.map((order, index) => (
-          <div
-            key={order.id}
-            className="flex justify-between p-4 border-b border-white/10"
-          >
-            <div>
-              <p className="text-orange-300 font-bold">
-                Token #{order.token}
-              </p>
-              <p className="text-gray-300">👤 {order.customer}</p>
-              <p className="text-sm text-gray-400">
-                🍯 {order.jalebi || "0"}
-              </p>
-            </div>
+        {queue.length === 0 ? (
+          <p className="text-gray-400">No Orders</p>
+        ) : (
+          <div className="space-y-3">
 
-            {/* ⏱ FINAL WAITING TIME */}
-            <div className="text-green-400 font-bold">
-              ⏱ {index === 0 ? "In Progress" : getWaitingTime(index)}
-            </div>
+            {queue.map((order, index) => (
+              <div
+                key={order.id}
+                className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col md:flex-row md:justify-between"
+              >
+
+                <div>
+                  <h3 className="font-bold text-orange-300">
+                    Token #{order.token}
+                  </h3>
+
+                  <p>👤 {order.customer}</p>
+
+                  <p className="text-sm text-gray-400">
+                    💳 {order.payment}
+                  </p>
+
+                  <p className="text-green-400 font-bold mt-1">
+                    ⏱ Waiting Time: {getWaitingTime(index)} min
+                  </p>
+                </div>
+
+                <div className="text-gray-300">
+                  {order.jalebi && <p>🍯 {order.jalebi}</p>}
+                  {order.dahi && <p>🥛 {order.dahi}</p>}
+                </div>
+
+                {/* ❌ STATUS REMOVED (IMPORTANT CHANGE) */}
+              </div>
+            ))}
+
           </div>
-        ))}
+        )}
       </div>
+
+      <p className="text-center mt-6 text-gray-500 text-sm">
+        Please wait for your token number 🙏
+      </p>
     </div>
   );
 }
