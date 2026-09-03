@@ -15,6 +15,7 @@ function Track() {
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+
       const utterance = new SpeechSynthesisUtterance(text);
       window.speechSynthesis.speak(utterance);
     }
@@ -41,7 +42,10 @@ function Track() {
       });
 
       const map = {};
-      data.forEach((o) => (map[o.id] = o.status));
+      data.forEach((o) => {
+        map[o.id] = o.status;
+      });
+
       prevRef.current = map;
     });
 
@@ -56,15 +60,20 @@ function Track() {
   const next = queue[1];
 
   const getOrderTime = (order) => {
-    const jalebiKg = parseInt(order.jalebi?.match(/\d+/)?.[0] || 0);
+    const jalebiKg = parseInt(
+      order.jalebi?.match(/\d+/)?.[0] || 0
+    );
+
     return jalebiKg * JALEBI_TIME_PER_KG + DAHI_TIME;
   };
 
   const getWaitingTime = (index) => {
     let total = 0;
+
     for (let i = 0; i < index; i++) {
       total += getOrderTime(queue[i]);
     }
+
     return total;
   };
 
@@ -76,7 +85,9 @@ function Track() {
 
       {/* HEADER */}
       <div className={`${glass} p-6 text-center`}>
-        <h1 className="text-3xl font-bold">📺 Live Queue Display</h1>
+        <h1 className="text-3xl font-bold">
+          📺 Live Queue Display
+        </h1>
 
         <p className="text-gray-400 mt-1">
           Smart Order Tracking System
@@ -85,7 +96,9 @@ function Track() {
         <button
           onClick={toggleVoice}
           className={`mt-3 px-4 py-2 rounded-lg font-bold ${
-            voiceEnabled ? "bg-red-500" : "bg-green-500 text-black"
+            voiceEnabled
+              ? "bg-red-500"
+              : "bg-green-500 text-black"
           }`}
         >
           🔊 {voiceEnabled ? "Disable Voice" : "Enable Voice"}
@@ -97,7 +110,9 @@ function Track() {
 
         {/* CURRENT */}
         <div className={`${glass} p-6 text-center`}>
-          <h2 className="text-xl font-bold">🔴 Now Preparing</h2>
+          <h2 className="text-xl font-bold">
+            🔴 Now Preparing
+          </h2>
 
           {current ? (
             <>
@@ -105,20 +120,45 @@ function Track() {
                 #{current.token}
               </div>
 
-              <p className="mt-2">👤 {current.customer}</p>
+              {/* STATUS */}
+              <div className="mt-3">
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                    current.status === "Preparing"
+                      ? "bg-yellow-500/20 text-yellow-300 border-yellow-400"
+                      : current.status === "Be Ready"
+                      ? "bg-blue-500/20 text-blue-300 border-blue-400"
+                      : current.status === "Take From Counter"
+                      ? "bg-purple-500/20 text-purple-300 border-purple-400"
+                      : current.status === "Completed"
+                      ? "bg-green-500/20 text-green-300 border-green-400"
+                      : "bg-gray-500/20 text-gray-300 border-gray-400"
+                  }`}
+                >
+                  {current.status}
+                </span>
+              </div>
+
+              <p className="mt-3">
+                👤 {current.customer}
+              </p>
 
               <p className="text-green-400 mt-2 font-bold">
                 ⏱ In Progress
               </p>
             </>
           ) : (
-            <p className="text-gray-400 mt-4">No Active Orders</p>
+            <p className="text-gray-400 mt-4">
+              No Active Orders
+            </p>
           )}
         </div>
 
         {/* NEXT */}
         <div className={`${glass} p-6 text-center`}>
-          <h2 className="text-xl font-bold">🟡 Be Ready</h2>
+          <h2 className="text-xl font-bold">
+            🟡 Be Ready
+          </h2>
 
           {next ? (
             <>
@@ -126,24 +166,51 @@ function Track() {
                 #{next.token}
               </div>
 
-              <p className="mt-2">👤 {next.customer}</p>
+              {/* STATUS */}
+              <div className="mt-3">
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                    next.status === "Preparing"
+                      ? "bg-yellow-500/20 text-yellow-300 border-yellow-400"
+                      : next.status === "Be Ready"
+                      ? "bg-blue-500/20 text-blue-300 border-blue-400"
+                      : next.status === "Take From Counter"
+                      ? "bg-purple-500/20 text-purple-300 border-purple-400"
+                      : next.status === "Completed"
+                      ? "bg-green-500/20 text-green-300 border-green-400"
+                      : "bg-gray-500/20 text-gray-300 border-gray-400"
+                  }`}
+                >
+                  {next.status}
+                </span>
+              </div>
+
+              <p className="mt-3">
+                👤 {next.customer}
+              </p>
 
               <p className="text-green-400 mt-2 font-bold">
                 ⏱ Waiting: {getWaitingTime(1)} min
               </p>
             </>
           ) : (
-            <p className="text-gray-400 mt-4">No Next Order</p>
+            <p className="text-gray-400 mt-4">
+              No Next Order
+            </p>
           )}
         </div>
       </div>
 
       {/* QUEUE LIST */}
       <div className={`${glass} mt-6 p-4 md:p-6`}>
-        <h2 className="text-2xl font-bold mb-4">📋 Live Queue</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          📋 Live Queue
+        </h2>
 
         {queue.length === 0 ? (
-          <p className="text-gray-400">No Orders</p>
+          <p className="text-gray-400">
+            No Orders
+          </p>
         ) : (
           <div className="space-y-3">
 
@@ -158,7 +225,28 @@ function Track() {
                     Token #{order.token}
                   </h3>
 
-                  <p>👤 {order.customer}</p>
+                  {/* STATUS - LIVE UPDATE */}
+                  <div className="mt-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        order.status === "Preparing"
+                          ? "bg-yellow-500/20 text-yellow-300 border-yellow-400"
+                          : order.status === "Be Ready"
+                          ? "bg-blue-500/20 text-blue-300 border-blue-400"
+                          : order.status === "Take From Counter"
+                          ? "bg-purple-500/20 text-purple-300 border-purple-400"
+                          : order.status === "Completed"
+                          ? "bg-green-500/20 text-green-300 border-green-400"
+                          : "bg-gray-500/20 text-gray-300 border-gray-400"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-2">
+                    👤 {order.customer}
+                  </p>
 
                   <p className="text-sm text-gray-400">
                     💳 {order.payment}
@@ -170,11 +258,15 @@ function Track() {
                 </div>
 
                 <div className="text-gray-300">
-                  {order.jalebi && <p>🍯 {order.jalebi}</p>}
-                  {order.dahi && <p>🥛 {order.dahi}</p>}
+                  {order.jalebi && (
+                    <p>🍯 {order.jalebi}</p>
+                  )}
+
+                  {order.dahi && (
+                    <p>🥛 {order.dahi}</p>
+                  )}
                 </div>
 
-                {/* ❌ STATUS REMOVED (IMPORTANT CHANGE) */}
               </div>
             ))}
 
